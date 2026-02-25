@@ -12,7 +12,7 @@ module REGISTER (
 );
 
 //create 32 registers that are each 32 bits wide
-reg [31:0] register [31:0];
+reg [31:0] registers [31:0];
 
 integer i;
 
@@ -23,7 +23,7 @@ integer i;
             
 	        for (i = 0; i < 32; i = i + 1)
 	        begin
-	            register [i] <= 32'b0;
+	            registers [i] <= 32'b0;
 	        end
 	        
 
@@ -33,7 +33,7 @@ integer i;
             if (iWriteEn && iRdAddr != 0)
             begin
                 //iRdAddr is 5 bits. that means it's a number that ranges from 0-31 which fits perfectly with the number of registers we have here
-                register [iRdAddr] <= iWriteData;
+                registers [iRdAddr] <= iWriteData;
             end
         end
     end
