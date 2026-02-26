@@ -1,91 +1,99 @@
 module DATA_MEMORY (
-    input iClk,
-    input iRstN,
+    input        iClk,
+    input        iRstN,
     input [31:0] iAddress,
     input [31:0] iWriteData,
-    input [2:0] iFunct3,
-    input iMemWrite,
-    input iMemRead,
+    input [2:0]  iFunct3,
+    input        iMemWrite,
+    input        iMemRead,
     output [31:0] oReadData
 );
 
     localparam B = 8;
     localparam K = 1024;
-    
-    reg [B-1:0] rDataMem [0:(K*4)-1]; // 4KB data memory, byte-addressable
+
+    // 4KB data memory, byte-addressable
+    reg [B-1:0] rDataMem [0:(K*4)-1];
+
+    // Use lower 12 bits for 4KB byte addressing
+    wire [11:0] addr = iAddress[11:0];
 
     initial begin
         $readmemh("data.txt", rDataMem);
     end
 
-    //write
+    // --------------------
+    // Write logic (sync)
+    // --------------------
     always @(posedge iClk) begin
         if (iMemWrite) begin
             case (iFunct3)
-                3'b000: begin //SB (store byte)
-                    rDataMem[iAddress] <= iWriteData[7:0];
+                3'b000: begin // SB
+                    rDataMem[addr] <= iWriteData[7:0];
                 end
 
-                3'b001: begin //SH (store halfword)
-                    rDataMem[iAddress] <= iWriteData[7:0];
-                    rDataMem[iAddress + 1] <= iWriteData[15:8];
+                3'b001: begin // SH
+                    rDataMem[addr]     <= iWriteData[7:0];
+                    rDataMem[addr + 1] <= iWriteData[15:8];
                 end
 
-                3'b010: begin //SW (store word)
-                    rDataMem[iAddress] <= iWriteData[7:0];
-                    rDataMem[iAddress + 1] <= iWriteData[15:8];
-                    rDataMem[iAddress + 2] <= iWriteData[23:16];
-                    rDataMem[iAddress + 3] <= iWriteData[31:24];
+                3'b010: begin // SW
+                    rDataMem[addr]     <= iWriteData[7:0];
+                    rDataMem[addr + 1] <= iWriteData[15:8];
+                    rDataMem[addr + 2] <= iWriteData[23:16];
+                    rDataMem[addr + 3] <= iWriteData[31:24];
                 end
 
                 default: begin
-                    //do nothing
+                    // no write
                 end
             endcase
         end
     end
 
-    //read
+    // --------------------
+    // Read logic (async)
+    // --------------------
+    reg [31:0] read_data_r;
+
     always @(*) begin
         if (iMemRead) begin
             case (iFunct3)
 
-                3'b000: begin //LB (load byte, sign-extend)
-                    oReadData = {{24{rDataMem[iAddress][7]}}, rDataMem[iAddress]};
+                3'b000: begin // LB (sign-extend)
+                    read_data_r = {{24{rDataMem[addr][7]}}, rDataMem[addr]};
                 end
 
-                3'b001: begin //LH (load halfword, sign-extend)
-                    oReadData = {{16{rDataMem[iAddress+1][7]}},
-                                 rDataMem[iAddress+1],
-                                 rDataMem[iAddress]};
+                3'b001: begin // LH (sign-extend)
+                    read_data_r = {{16{rDataMem[addr + 1][7]}},
+                                   rDataMem[addr + 1],
+                                   rDataMem[addr]};
                 end
 
-                3'b010: begin //LW (load word)
-                    oReadData = {rDataMem[iAddress+3],
-                                 rDataMem[iAddress+2],
-                                 rDataMem[iAddress+1],
-                                 rDataMem[iAddress]};
+                3'b010: begin // LW
+                    read_data_r = {rDataMem[addr + 3],
+                                   rDataMem[addr + 2],
+                                   rDataMem[addr + 1],
+                                   rDataMem[addr]};
                 end
 
-                3'b100: begin //LBU (load byte, zero-extend)
-                    oReadData = {24'b0, rDataMem[iAddress]};
+                3'b100: begin // LBU
+                    read_data_r = {24'b0, rDataMem[addr]};
                 end
 
-                3'b101: begin //LHU (load halfword, zero-extend)
-                    oReadData = {16'b0,
-                                 rDataMem[iAddress+1],
-                                 rDataMem[iAddress]};
+                3'b101: begin // LHU
+                    read_data_r = {16'b0,
+                                   rDataMem[addr + 1],
+                                   rDataMem[addr]};
                 end
 
-                default: begin
-                    oReadData = 32'b0;
-                end
-
+                default: read_data_r = 32'b0;
             endcase
-        end
-        else begin
-            oReadData = 32'b0;
+        end else begin
+            read_data_r = 32'b0;
         end
     end
+
+    assign oReadData = read_data_r;
 
 endmodule

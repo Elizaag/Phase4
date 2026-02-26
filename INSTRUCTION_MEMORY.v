@@ -3,9 +3,22 @@ module INSTRUCTION_MEMORY (
     output [31:0] oInstr
 );
 
-    // Simple ROM for instructions (word addressed)
-    reg [31:0] imem [0:255];
+    localparam B = 8;
+    localparam K = 1024;
 
-    assign oInstr = imem[iRdAddr[31:2]];
+    reg [B-1:0] rInstrMem [0:K-1];
+
+    wire [9:0] addr = iRdAddr[9:0];  // <<< FIX
+
+    initial begin
+        $readmemh("instr.txt", rInstrMem);
+    end
+
+    assign oInstr = {
+        rInstrMem[addr + 3],
+        rInstrMem[addr + 2],
+        rInstrMem[addr + 1],
+        rInstrMem[addr]
+    };
 
 endmodule

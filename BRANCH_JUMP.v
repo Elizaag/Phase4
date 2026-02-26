@@ -1,49 +1,35 @@
 module BRANCH_JUMP (
-    input iBranch,
-    input iJump,
-    input iZero,
+    input        iBranch,
+    input        iJump,
+    input        iZero,
     input [31:0] iOffset,
     input [31:0] iPc,
     input [31:0] iRs1,
-    input iPcSrc,
-    output reg [31:0] oPc // this was not reg before
+    input        iPcSrc,
+    output [31:0] oPc
 );
 
-//Working through my own logic and research 
-//assign iPc = iRs1 + iPcSrc; 
-  
-//assign oPc = iOffset + iPc;
-/************************************************************/
-//Branches are relative addresses (target PC + offset)
-
-//assign iBranch = oPc + iOffset;
-
-//Jump uses absolute addresses - Target address = RS1 + 32 Bit offset
-
-//assign iJump = iRs1 + iOffset; 
-
+    reg [31:0] pc_next;
 
     always @(*) begin
-
         if (iJump) begin
-
             if (iPcSrc)
-                //JALR: rs1 + offset  | JAL: PC + offset
-                //oPc = iRs1 + iOffset;
-                oPc = (iRs1 + iOffset) & 32'hFFFFFFFE;
+                // JALR: (rs1 + offset) with LSB cleared
+                pc_next = (iRs1 + iOffset) & 32'hFFFFFFFE;
             else
-                oPc = iPc + iOffset; //JAL
-        end 
-
+                // JAL: PC + offset
+                pc_next = iPc + iOffset;
+        end
         else if (iBranch && iZero) begin
-            //ALU branch, PC and offset 
-            oPc = iPc + iOffset;
+            // Taken branch
+            pc_next = iPc + iOffset;
         end
-
         else begin
-            oPc = iPc + 32'd4;
+            // Default: next sequential instruction
+            pc_next = iPc + 32'd4;
         end
-
     end
+
+    assign oPc = pc_next;
 
 endmodule
